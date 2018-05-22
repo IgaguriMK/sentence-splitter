@@ -2,6 +2,8 @@ package main
 
 import (
 	"github.com/IgaguriMK/sentence-splitter/subcmd"
+
+	_ "github.com/IgaguriMK/sentence-splitter/subcmd/extract"
 	_ "github.com/IgaguriMK/sentence-splitter/subcmd/split"
 )
 
