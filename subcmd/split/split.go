@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -29,21 +30,19 @@ func (_ *Split) Help() string {
 
 func (sp *Split) Register(cc *kingpin.CmdClause) {
 	cc.Flag("input", "Input file.").Short('i').FileVar(&sp.inFile)
-	cc.Flag("output", "Output file.").Short('o').FileVar(&sp.outFile)
+	cc.Flag("output", "Output file.").Short('o').OpenFileVar(&sp.outFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 }
 
 func (sp *Split) Run() {
 	if sp.inFile == nil {
 		sp.inFile = os.Stdin
-	} else {
-		defer sp.inFile.Close()
 	}
+	defer sp.inFile.Close()
 
 	if sp.outFile == nil {
 		sp.outFile = os.Stdout
-	} else {
-		defer sp.outFile.Close()
 	}
+	defer sp.outFile.Close()
 
 	sc := bufio.NewScanner(sp.inFile)
 
@@ -56,17 +55,20 @@ func (sp *Split) Run() {
 		}
 
 		for len(line) > 0 {
-			sentence, left := getSentence(line)
-			fmt.Fprintf(sp.outFile, "> %s\n", sentence)
-			line = left
-		}
+			sentence, left, found := getSentence(line, '.')
+			fmt.Fprintf(sp.outFile, "- %s\n", sentence)
 
-		fmt.Fprintln(sp.outFile, "< ")
+			if found {
+				fmt.Fprintln(sp.outFile, "+ ")
+			}
+
+			line = strings.TrimSpace(left)
+		}
 	}
 
 }
 
-func getSentence(text string, seps ...rune) (sentence string, left string) {
+func getSentence(text string, seps ...rune) (sentence string, left string, found bool) {
 	runes := []rune(text)
 
 	sentenceRunes := make([]rune, 0)
@@ -79,10 +81,10 @@ func getSentence(text string, seps ...rune) (sentence string, left string) {
 
 		for _, sep := range seps {
 			if r == sep {
-				return string(sentenceRunes), string(runes)
+				return string(sentenceRunes), string(runes), true
 			}
 		}
 	}
 
-	return string(sentenceRunes), ""
+	return string(sentenceRunes), "", false
 }
